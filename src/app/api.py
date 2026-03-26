@@ -29,7 +29,9 @@ def create_app(model_path: str = "models/model.pkl"):
         )
 
     model= joblib.load(model_path)
-
+    # Fix if tuple was saved
+    if isinstance(model, tuple):
+        model = model[0]    
     app = FastAPI(title="Iris Model API")
 
     # Map numeric predictions to class names

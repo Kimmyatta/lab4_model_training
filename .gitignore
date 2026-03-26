@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual env
+venv/
+
+# Airflow runtime
+airflow_home/
+
+# Logs
+logs/
+
+# OS
+.DS_Store
