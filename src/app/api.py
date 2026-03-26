@@ -12,7 +12,7 @@ class IrisRequest(BaseModel):
     petal_length: float
     petal_width: float
 
-def create_app(model_path: str = "models/iris_model.pkl"):
+def create_app(model_path: str = "models/model.pkl"):
     """
     Creates a FastAPI app that serves predictions for the Iris model.
 
@@ -28,7 +28,8 @@ def create_app(model_path: str = "models/iris_model.pkl"):
             "Train the model first (run the DAG or scripts/train_model.py)."
         )
 
-    model = joblib.load(model_path)
+    model= joblib.load(model_path)
+
     app = FastAPI(title="Iris Model API")
 
     # Map numeric predictions to class names
@@ -55,5 +56,12 @@ def create_app(model_path: str = "models/iris_model.pkl"):
             raise HTTPException(status_code=400, detail=str(e))
         return {"prediction": target_names[idx], "class_index": idx}
 
+    @app.get("/model/info")
+    def model_info():
+        import json
+        with open("models/metadata.json") as f:
+            metadata = json.load(f)
+        return metadata
+        
     # return the FastAPI app
     return app
