@@ -4,23 +4,13 @@ import numpy as np
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+import json
 
-# Explicit request schema for Iris dataset (4 features)
-class IrisRequest(BaseModel):
-    sepal_length: float
-    sepal_width: float
-    petal_length: float
-    petal_width: float
+# Explicit request schema for breast cancer dataset (30 features)
+class CancerRequest(BaseModel):
+    features: list[float]
 
 def create_app(model_path: str = "models/model.pkl"):
-    """
-    Creates a FastAPI app that serves predictions for the Iris model.
-
-    Example values that commonly predict each class:
-      - setosa:     5.1, 3.5, 1.4, 0.2
-      - versicolor: 6.0, 2.9, 4.5, 1.5
-      - virginica:  6.9, 3.1, 5.4, 2.1
-    """
     # Helpful guard so students get a clear error if they forgot to train first
     if not Path(model_path).exists():
         raise RuntimeError(
@@ -32,27 +22,28 @@ def create_app(model_path: str = "models/model.pkl"):
     # Fix if tuple was saved
     if isinstance(model, tuple):
         model = model[0]    
-    app = FastAPI(title="Iris Model API")
+    app = FastAPI(title="Breast Cancer Model API")
 
     # Map numeric predictions to class names
-    target_names = {0: "setosa", 1: "versicolor", 2: "virginica"}
+    target_names = {0: "malignant", 1: "benign"}
 
     @app.get("/")
     def root():
         return {
-            "message": "Iris model is ready for inference!",
+            "message": "Breast Cancer model is ready for inference!",
             "classes": target_names,
         }
 
     @app.post("/predict")
-    def predict(request: IrisRequest):
-        # Convert request into the correct shape (1 x 4)
-        X = np.array([
-            [request.sepal_length, request.sepal_width,
-             request.petal_length, request.petal_width]
-        ])
+    def predict(request: CancerRequest):
         try:
+             # Expect exactly 30 features
+            if len(request.features) != 30:
+                raise ValueError("Expected 30 features for breast cancer model")
+                
+            X = np.array([request.features])
             idx = int(model.predict(X)[0])
+            
         except Exception as e:
             # Surface any shape/validation issues as a 400 instead of a 500
             raise HTTPException(status_code=400, detail=str(e))
@@ -60,7 +51,6 @@ def create_app(model_path: str = "models/model.pkl"):
 
     @app.get("/model/info")
     def model_info():
-        import json
         with open("models/metadata.json") as f:
             metadata = json.load(f)
         return metadata

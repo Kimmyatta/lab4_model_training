@@ -4,12 +4,12 @@ from datetime import datetime
 import os
 import json
 import joblib
+import boto3
 
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
-
 
 default_args = {"owner": "airflow", "retries": 1}
 
@@ -23,9 +23,9 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    # ------------------------
+    
     # 1. TRAIN MODEL
-    # ------------------------
+    #
     def train_model_task():
         data = load_breast_cancer()
 
@@ -38,15 +38,20 @@ with DAG(
 
         os.makedirs("models", exist_ok=True)
 
-        # Save model + test data for evaluation
-        joblib.dump((model, X_test, y_test), "models/model.pkl")
-
-
-    # ------------------------
-    # 2. EVALUATE MODEL
-    # ------------------------
+        # Save model
+        joblib.dump(model, "models/model.pkl")
+        
+    
+     # 2. EVALUATE MODEL
+    
     def evaluate_model_task():
-        model, X_test, y_test = joblib.load("models/model.pkl")
+        data = load_breast_cancer()
+
+        _, X_test, _, y_test = train_test_split(
+        data.data, data.target, test_size=0.2, random_state=42
+        )
+        model = joblib.load("models/model.pkl")
+       
 
         preds = model.predict(X_test)
         acc = accuracy_score(y_test, preds)
@@ -54,15 +59,14 @@ with DAG(
         metrics = {"accuracy": acc}
 
         with open("models/metrics.json", "w") as f:
-            json.dump(metrics, f)
+            json.dump(metrics, f, indent=2)
 
         print(f"Model accuracy: {acc}")
 
 
-    # ------------------------
+
     # 3. PROMOTE MODEL
     def promote_model_task():
-        import boto3
         
         # Ensure models folder exists
         os.makedirs("models", exist_ok=True)
@@ -88,7 +92,7 @@ with DAG(
 
         # Save metadata locally
         with open("models/metadata.json", "w") as f:
-            json.dump(metadata, f)
+            json.dump(metadata, f, indent=2)
 
         print(f"Model promoted locally! Version: {version}")
 
