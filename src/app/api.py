@@ -3,14 +3,32 @@ import joblib
 import numpy as np
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import json
 
+EXAMPLE_FEATURES = [
+    17.99, 10.38, 122.8, 1001, 0.1184, 0.2776, 0.3001, 0.1471, 0.2419, 0.07871,
+    1.095, 0.9053, 8.589, 153.4, 0.006399, 0.04904, 0.05373, 0.01587, 0.03003, 0.006193,
+    25.38, 17.33, 184.6, 2019, 0.1622, 0.6656, 0.7119, 0.2654, 0.4601, 0.1189
+]
 # Explicit request schema for breast cancer dataset (30 features)
 class CancerRequest(BaseModel):
-    features: list[float]
-
+    features: list[float]= Field(
+        default=EXAMPLE_FEATURES,
+        description="List of 30 breast cancer features",
+        examples=[EXAMPLE_FEATURES]
+    )
 def create_app(model_path: str = "models/model.pkl"):
+    """
+    Creates a FastAPI app that serves predictions for the Breast Cancer model.
+
+    Example values for the 30-feature breast cancer input:
+      - features: [
+          17.99, 10.38, 122.8, 1001, 0.1184, 0.2776, 0.3001, 0.1471, 0.2419, 0.07871,
+          1.095, 0.9053, 8.589, 153.4, 0.006399, 0.04904, 0.05373, 0.01587, 0.03003, 0.006193,
+          25.38, 17.33, 184.6, 2019, 0.1622, 0.6656, 0.7119, 0.2654, 0.4601, 0.1189
+        ]
+        """
     # Helpful guard so students get a clear error if they forgot to train first
     if not Path(model_path).exists():
         raise RuntimeError(
